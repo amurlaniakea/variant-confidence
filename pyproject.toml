@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Calibrated confidence layer for protein variant-effect pathogenicity predictions (AlphaMissense/ESM-1v/EVE)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "AGPL-3.0-or-later" }
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [{ name = "Pedro Sordo Martínez", email = "amurlaniakea@gmail.com" }]
 keywords = ["bioinformatics", "variant-effect", "calibration", "conformal-prediction", "ECE", "pathogenicity"]
 dependencies = [
