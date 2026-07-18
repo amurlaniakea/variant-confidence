@@ -41,7 +41,7 @@ def _get_json(url: str, data: bytes | None = None, retries: int = 4) -> dict:
     for attempt in range(retries):
         try:
             req = urllib.request.Request(url, data=data, headers=UA)
-            with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310  # noqa: S310 — data loader, HTTPS-only ClinVar endpoints
+            with urllib.request.urlopen(req, timeout=60) as r:
                 return json.loads(r.read())
         except Exception as e:  # noqa: BLE001 - we retry on any network error
             last_err = e
