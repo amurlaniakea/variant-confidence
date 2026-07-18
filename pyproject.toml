@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.4", "ruff>=0.4"]
+dev = ["pytest>=7.4", "ruff>=0.4", "bandit>=1.7", "pytest-cov>=4.1"]
 
 [project.scripts]
 variant-confidence = "variant_confidence.cli:main"
