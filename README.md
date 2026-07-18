@@ -90,6 +90,28 @@ licenses, which the end user is responsible for complying with:
 This project does not redistribute data under a license different from its
 own.
 
+## Documentation
+
+- **[SDD.md](SDD.md)** — full specification (Constitution, Spec, Plan, Tasks,
+  Acceptance Criteria AC1–AC13b). The technical anchor of the project.
+- **[INVESTIGACION.md](INVESTIGACION.md)** — research basis (ES): the calibration
+  gap, the four silent-leakage bugs found in audit, the AlphaMissense license
+  ambiguity, and the architectural findings.
+- **[CHANGELOG.md](CHANGELOG.md)** — version history (v0.1.0 entry).
+
+### References consulted
+
+- **AnnotateMissense (2026)** — arXiv:2605.24520. Baseline without calibration:
+  MCC 0.7613, accuracy 0.8798, F1 0.8750 on temporal ClinVar validation. The
+  project's target is to reduce ECE, not improve this accuracy.
+- **AlphaMissense** — Cheng et al., *Science* 2023 (adg7492);
+  `google-deepmind/alphamissense`. Scores are CC BY 4.0 per README but
+  CC BY-NC-SA 4.0 per the distributed TSV/VEP/EBI — contradiction unresolved
+  (see AlphaMissense data section).
+- **Data sources verified 2026-07-18 (real HTTP calls):** ClinVar E-utilities
+  (200, no token), dbNSFP (200), Ensembl VEP REST (200), AlphaMissense repo
+  (200); gnomAD GraphQL endpoint live but returned 400 — not assumed accessible.
+
 ## License
 
 AGPL-3.0-or-later — Pedro Sordo Martínez (amurlaniakea@gmail.com), 2026.
