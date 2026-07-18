@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 import sys
 
+import numpy as np
+
 from variant_confidence.calib.synthetic import generate_scores
 from variant_confidence.data.dataset import build_dataframe, build_dataframe_from_fixture
 from variant_confidence.pipeline import run_calibration
@@ -59,12 +61,14 @@ def main(argv=None) -> int:
     scores = generate_scores(y, seed=42, overconfidence=0.6)
 
     # temporal holdout = most recent variants (post gene-isolation, done
-    # upstream by split.temporal). For the CLI demo we reuse the fixture's
-    # dates to pick the eval set, keeping fit/eval disjoint.
+    # upstream by split.temporal). Use split.test_idx (ORIGINAL df positions,
+    # computed before any reset_index) so we index the aligned scores/y/genes
+    # arrays correctly. NEVER use split.test.index — it was reset and would
+    # silently point at the wrong rows (audit-found AC3-breaking bug).
     from variant_confidence.split.temporal import temporal_gene_isolated_split
     split = temporal_gene_isolated_split(df, holdout_days=730,
                                           min_holdout=args.min_holdout, verbose=False)
-    eval_idx = split.test.index.to_numpy()
+    eval_idx = np.asarray(split.test_idx)
 
     rep = run_calibration(
         scores, y, method=args.method, alpha=args.alpha,
