@@ -40,3 +40,42 @@ def generate_scores(
     # overconfident raw score: move true_p toward 0/1
     raw = true_p * (1 - overconfidence) + (true_p > 0.5).astype(float) * overconfidence
     return np.clip(raw, 0.0, 1.0)
+
+
+def inject_missing(
+    scores: np.ndarray,
+    *,
+    missing_fraction: float = 0.0,
+    missing_genes: list[str] | None = None,
+    genes: np.ndarray | None = None,
+    seed: int = 7,
+) -> np.ndarray:
+    """Return a COPY of `scores` with controlled NaN injection.
+
+    Two independent mechanisms (mirroring real AlphaMissense gaps):
+      - missing_fraction: random X% of variants set to NaN.
+      - missing_genes: ALL variants of these genes set to NaN (entire
+        proteins/isoforms without prediction).
+
+    Args:
+        scores: base scores in [0,1].
+        missing_fraction: fraction of rows (excluding missing_genes) to NaN.
+        missing_genes: gene names whose every variant becomes NaN.
+        genes: gene per variant (required if missing_genes given).
+        seed: RNG seed for reproducible random drop.
+
+    Returns NaN-injected scores. Deterministic given the seed.
+    """
+    scores = np.asarray(scores, dtype=float).copy()
+    rng = np.random.default_rng(seed)
+    if missing_genes and genes is not None:
+        genes = np.asarray(genes)
+        mask = np.isin(genes, list(missing_genes))
+        scores[mask] = np.nan
+    if missing_fraction > 0.0:
+        n = len(scores)
+        n_rand = int(round(n * missing_fraction))
+        if n_rand > 0:
+            idx = rng.choice(n, size=n_rand, replace=False)
+            scores[idx] = np.nan
+    return scores

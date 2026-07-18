@@ -1,13 +1,15 @@
-"""T7/T10: end-to-end calibration pipeline + reporting.
+"""T7/T10/T12: end-to-end calibration pipeline + missing-score handling.
 
-Orchestrates the full flow while ENFORCING the anti-leakage rules already
-proven in T5 (gene-isolation) and AC10 (fit/eval separation):
-
-  - The temporal holdout (post gene-isolation) is the EVALUATION set.
-  - Calibration (Platt/isotonic/conformal) is FIT on a calibration split
-    DRAWN FROM THE TRAIN portion (never the eval holdout).
-  - ECE and conformal empirical coverage are MEASURED ONLY on the eval
-    holdout — never on the calibration/fit set (AC10, your audit condition).
+Orchestrates the full flow while ENFORCING the anti-leakage rules proven in
+T5 (gene-isolation) and AC10 (fit/eval separation). T12 adds explicit
+missing-score handling (AC4 reinforcement): AlphaMissense does NOT cover
+100% of ClinVar variants, so real inputs WILL have NaN scores. A missing
+score must NEVER be treated as 0 / a confident prediction. Two modes:
+  - on_missing="fail" (default): raise with an explicit message. Use this
+    in CI / strict pipelines — a missing score is a data-integrity error,
+    not something to silently paper over.
+  - on_missing="degrade": exclude missing rows from ECE/coverage, report
+    n_missing and fraction_missing, and emit a degraded flag. No silent 0.
 
 The CLI passes explicit fit_idx/eval_idx; this module never lets them
 overlap (delegates to _check_split).
@@ -41,6 +43,9 @@ class CalibrationReport:
     mondrian_fallback_rate: float | None = None  # 1.0 = all eval used global quantiles
     n_eval: int = 0
     n_calib: int = 0
+    n_missing: int = 0
+    fraction_missing: float = 0.0
+    degraded: bool = False
 
 
 def run_calibration(
@@ -53,24 +58,56 @@ def run_calibration(
     eval_idx: np.ndarray | None = None,
     calib_fraction: float = 0.5,
     seed: int = 42,
+    on_missing: str = "fail",
 ) -> CalibrationReport:
     """Calibrate `scores` and report ECE before/after on the EVAL holdout.
 
     Args:
-        scores: raw model scores in [0,1].
+        scores: raw model scores in [0,1], or np.nan where missing.
         labels: binary labels.
         method: "platt" | "isotonic" | "conformal".
         alpha: conformal miscoverage level (coverage target = 1-alpha).
         by_gene: gene per variant (for Mondrian conformal / gene-isolation).
-        eval_idx: indices of the TEMPORAL HOLDOUT (evaluation set). If None,
-            a stratified 30% eval split is drawn from within this call — but
-            in production the CLI passes the real temporal holdout.
+        eval_idx: indices of the TEMPORAL HOLDOUT (evaluation set).
         calib_fraction: fraction of the non-eval data used to FIT calib.
         seed: RNG seed for reproducible calib/eval split.
+        on_missing: "fail" (default, raise on any NaN) or "degrade"
+            (exclude missing, report n_missing / fraction_missing).
     """
+    if on_missing not in ("fail", "degrade"):
+        raise ValueError(f"on_missing must be 'fail' or 'degrade', got {on_missing!r}")
+
     scores = np.asarray(scores, dtype=float)
     labels = np.asarray(labels, dtype=int)
     n = len(scores)
+
+    missing_mask = np.isnan(scores)
+    n_missing = int(missing_mask.sum())
+    if n_missing > 0:
+        if on_missing == "fail":
+            raise ValueError(
+                f"Missing scores detected: {n_missing}/{n} variants have NaN "
+                f"scores. AlphaMissense does not cover 100% of ClinVar. Use "
+                f"on_missing='degrade' to exclude them explicitly, or fix the "
+                f"data join. NEVER treat a missing score as 0 — that is a "
+                f"silent bug (AC4)."
+            )
+        # degrade: exclude missing rows from ALL downstream computation.
+        # Caller-supplied eval_idx are ORIGINAL df positions; re-map them to
+        # the trimmed-array positions so indexing stays valid.
+        keep = ~missing_mask
+        n_total = len(scores)
+        orig_to_new = np.full(n_total, -1, dtype=int)
+        orig_to_new[keep] = np.arange(int(keep.sum()))
+        if eval_idx is not None:
+            eval_idx = np.asarray(eval_idx)
+            eval_idx = eval_idx[keep[eval_idx]]  # keep only surviving eval rows
+            eval_idx = orig_to_new[eval_idx]      # map to trimmed positions
+        scores = scores[keep]
+        labels = labels[keep]
+        if by_gene is not None:
+            by_gene = np.asarray(by_gene)[keep]
+        n = len(scores)
 
     if eval_idx is None:
         _, eval_idx = train_test_split(
@@ -92,6 +129,9 @@ def run_calibration(
         ece_after=0.0,
         n_eval=int(len(eval_idx)),
         n_calib=int(len(calib_idx)),
+        n_missing=n_missing,
+        fraction_missing=(n_missing / (n_missing + n)) if (n_missing + n) else 0.0,
+        degraded=(n_missing > 0),
     )
 
     if method in ("platt", "isotonic"):

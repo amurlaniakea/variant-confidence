@@ -209,6 +209,21 @@ AC11 — Catálogo de fugas silenciosas (lecciones de la sesión de audit)
   un test que reconstruye el conjunto de forma independiente. Si el número
   "se ve bien" pero el split es incorrecto, el bug es silencioso.
 
+AC12 — Scores ausentes NUNCA como 0 (anti-bug #5, AC4 reforzado)
+  AlphaMissense (y ESM-1v/EVE) NO cubren el 100% de las variantes de
+  ClinVar: hay proteínas/isoformas sin predicción, y joins por
+  protein+position+cambio aa pueden fallar. Un score ausente (NaN) debe
+  tratarse explícitamente, NUNCA como 0 ni como predicción confiable.
+  - run_calibration acepta on_missing="fail" (default, revienta con aviso
+    explícito en CI estricto) o on_missing="degrade" (excluye las filas
+    ausentes del cálculo de ECE/cobertura y reporta n_missing /
+    fraction_missing). En ningún modo un NaN se convierte en score 0.
+  - El test de degrade verifica que el ECE resultante es idéntico al de
+    correr sobre el subconjunto presente directamente (sin ceros
+    implícitos filtrándose).
+  - El CLI expone --on-missing y lo declara en el reporte ("MISSING SCORES
+    = N (X%) [DEGRADED]" o FATAL en modo fail).
+
 ================================================================
 ALCANCE HONESTO (sub-problemas, estilo SDD)
 ================================================================

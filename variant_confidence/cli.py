@@ -21,6 +21,12 @@ def _print_report(rep, scores_eval, labels_eval, method, args):
     print("=" * 60)
     print(f"CALIBRATION REPORT — method={rep.method}")
     print(f"  n_eval (temporal holdout)={rep.n_eval}  n_calib={rep.n_calib}")
+    if rep.n_missing > 0:
+        print(f"  MISSING SCORES = {rep.n_missing} "
+              f"({rep.fraction_missing:.1%}) [{'DEGRADED' if rep.degraded else ''}]")
+        if args.on_missing == "fail":
+            print("  FATAL: missing scores present (on_missing=fail)")
+            return
     print(f"  ECE before (raw) = {rep.ece_before:.4f} "
           f"CI[{rep.ece_before_ci[0]:.4f},{rep.ece_before_ci[1]:.4f}]")
     if method in ("platt", "isotonic"):
@@ -56,6 +62,10 @@ def main(argv=None) -> int:
     ap.add_argument("--min-holdout", type=int, default=500)
     ap.add_argument("--offline", action="store_true",
                     help="use versioned fixture (no network)")
+    ap.add_argument("--on-missing", choices=["fail", "degrade"], default="fail",
+                    help="how to handle NaN/missing scores (AC4). 'fail' raises "
+                         "explicitly (default, CI-strict); 'degrade' excludes "
+                         "missing rows and reports n_missing.")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args(argv)
 
@@ -81,7 +91,7 @@ def main(argv=None) -> int:
     rep = run_calibration(
         scores, y, method=args.method, alpha=args.alpha,
         by_gene=genes if args.method == "conformal" and args.mondrian else None,
-        eval_idx=eval_idx,
+        eval_idx=eval_idx, on_missing=args.on_missing,
     )
     if not args.quiet:
         _print_report(rep, scores[eval_idx], y[eval_idx], args.method, args)
