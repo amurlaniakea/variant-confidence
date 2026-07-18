@@ -269,6 +269,39 @@ AC13b — Patrón de missing REAL es ESTRUCTURAL (por proteína), no aleatorio
       cubiertas. El join por proteína requiere mapeo variant_id→uniprot_id
       que el fixture actual no trae.
 
+AC13c — Licencias de ESM-1v y EVE (verificadas 2026-07-18, fuentes primarias)
+
+Ambas fuentes son **MIT** (código y pesos), uso comercial permitido. Sin
+ambigüedad tipo AlphaMissense (AC13). Verificado por llamada HTTP real:
+
+- **ESM-1v** — repo `facebookresearch/esm`, rama `main`.
+  - README: "This source code is licensed under the MIT license found in the
+    LICENSE file in the root directory of this source tree."
+  - `setup.py`: `license="MIT"`. Código y pesos preentrenados se distribuyen
+    juntos bajo esa declaración MIT; NO hay carve-out de licencia separada para
+    los pesos de ESM-1v.
+  - El único carve-out del README es el **ESM Metagenomic Atlas** (CC BY 4.0,
+    Meta) y los IDs UniRef50/100 (CC BY 4.0 de UniProt) — ninguno es ESM-1v.
+  - ⚠️ NOTA DE HONESTIDAD: en una primera pasada se afirmó (sin fuente) que los
+    pesos de ESM-1v caían bajo "Meta Open Source Terms of Use". Eso NO se
+    pudo reproducir en ninguna fuente primaria (README, LICENSE, setup.py, ni
+    modelo card de HuggingFace accesible). Se retracta: ESM-1v es MIT, igual que
+    el código. No asumir restricciones no documentadas.
+  - Atribución requerida: Meta Platforms, Inc. + citar Meier et al. 2021
+    (doi:10.1101/2021.07.09.450648).
+
+- **EVE** — repo `OATML/EVE` (NO `OATML-Milers/EVE`, que no existe), rama
+  `master`.
+  - LICENSE: MIT, Copyright (c) 2021 Pascal Notin.
+  - Atribución requerida: Pascal Notin + citar Notin et al. 2022
+    (arXiv:2110.04624).
+
+Implicación para el pipeline (T14): ESM-1v y EVE se integran como fuentes
+calibrables ADICIONALES a AlphaMissense, con el mismo patrón ya blindado —
+join por variante, missing → NaN (nunca 0), licencia documentada en docstring,
+y los pesos/datos NUNCA se commitean (descarga externa bajo responsabilidad del
+usuario, igual que Opción A para AlphaMissense).
+
 ================================================================
 ALCANCE HONESTO (sub-problemas, estilo SDD)
 ================================================================
