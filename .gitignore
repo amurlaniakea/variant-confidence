@@ -1,0 +1,13 @@
+# Aislamiento git obligatorio (regla del usuario)
+# Excluir todo lo que no debe versionarse ni commitearse nunca
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.hermes/
+.gnupg/
+.aws/
+credentials/
+# Build artifacts
+*.egg-info/
+variant_confidence.egg-info/
