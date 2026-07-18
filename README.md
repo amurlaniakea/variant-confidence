@@ -1,6 +1,8 @@
 # variant-confidence
 
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
+[![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue.svg)](https://github.com/amurlaniakea/variant-confidence/releases/tag/v0.1.0)
+[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG-blue.svg)](CHANGELOG.md)
 
 Calibrated confidence layer for protein **variant-effect pathogenicity**
 predictions (AlphaMissense / ESM-1v / EVE). The project does **not** train a
