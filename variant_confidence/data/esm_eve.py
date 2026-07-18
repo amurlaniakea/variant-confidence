@@ -99,18 +99,22 @@ def load_eve(path: str) -> pd.DataFrame:
 def join_scores(
     variants: pd.DataFrame,
     scores: pd.DataFrame,
-    on_missing: str = "fail",
 ) -> np.ndarray:
     """Return model scores aligned to `variants`, NaN where no match.
+
+    Mirrors alphamissense.join_scores: ALWAYS returns NaN for unmatched
+    keys — this function never decides fail/degrade. The caller
+    (align_scores / run_calibration, AC12) owns that decision, so both
+    AlphaMissense and ESM-1v/EVE share one consistent pattern.
 
     Args:
         variants: DataFrame with at least chrom/pos/ref/alt (str/int).
         scores: output of load_esm1v() or load_eve().
-        on_missing: "fail" (default) raises if ANY variant is unmatched;
-            "degrade" returns NaN for unmatched and reports n_missing.
 
     Returns: float array len(len(variants)), np.nan where unmatched.
     """
+    if len(scores) == 0:
+        return np.full(len(variants), np.nan, dtype=float)
     key_v = (
         variants["chrom"].astype(str).str.upper() + ":"
         + variants["pos"].astype(int).astype(str) + ":"
@@ -126,10 +130,4 @@ def join_scores(
     score_map = pd.Series(scores["score"].to_numpy(), index=key_s.to_numpy())
     # .get returns NaN for unmatched keys — explicit, never a silent 0.
     aligned = key_v.map(score_map)
-    n_missing = int(aligned.isna().sum())
-    if on_missing == "fail" and n_missing > 0:
-        raise ValueError(
-            f"{n_missing} variants have no {scores['source'].iloc[0]} score; "
-            f"use on_missing='degrade' to exclude them (never silently 0)"
-        )
     return aligned.to_numpy(dtype=float)

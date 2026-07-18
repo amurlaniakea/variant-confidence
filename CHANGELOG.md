@@ -29,7 +29,16 @@ new model — it adds an auditable calibration layer on top of existing predicto
   message said "9 new tests" — that count was incorrect, corrected here.
 - **Non-deceptive reporting (AC7):** CLI emits score + interval + method + ECE
   before/after; never a bare calibrated score.
-- **AlphaMissense join (T13):** license-safe integration.
+- **ESM-1v / EVE join (T14):** `variant_confidence/data/esm_eve.py` loads
+  user-converted (chrom,pos,ref,alt,score) TSVs for ESM-1v (MIT, Meta) and EVE
+  (MIT, Pascal Notin); `join_scores` returns NaN (never 0) for unmatched, same
+  pattern as AlphaMissense. `integrate.align_scores_esm_eve` wires it to the
+  pipeline; weights are NEVER committed (Opción A). Licenses verified 2026-07-18
+  (AC13c).
+  **T14g (PENDING):** wiring to `cli.py` / `run_calibration` so
+  `variant-confidence --source esm1v|eve` works end-to-end — analogous to how
+  AlphaMissense is plumbed. The join module + integration layer are done and
+  tested; CLI plumbing is not yet connected.
 - **Degenerate-ECE bug fixed:** the synthetic generator now derives `true_p` from
   the real label with noise, so calibration is genuinely discriminative and AUC is
   preserved after calibration (no collapse to base rate).

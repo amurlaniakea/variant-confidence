@@ -33,6 +33,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from variant_confidence.data import esm_eve
 from variant_confidence.data.alphamissense import join_scores, load_alphamissense
 
 
@@ -71,4 +72,39 @@ def align_scores(df: pd.DataFrame, am_path: str, on: str = "position") -> dict:
         "n_missing": n_missing,
         "fraction_missing": fraction_missing,
         "missing_proteins": missing_proteins,
+    }
+
+
+def align_scores_esm_eve(
+    df: pd.DataFrame, score_path: str, source: str = "esm1v"
+) -> dict:
+    """Align ESM-1v or EVE scores to `df` (T14).
+
+    Same contract as align_scores (AlphaMissense): join_scores returns NaN
+    for unmatched keys; fail/degrade is decided upstream by run_calibration
+    (AC12). The join pattern is identical across all three sources.
+
+    Args:
+        df: ClinVar-style DataFrame with chrom/pos/ref/alt.
+        score_path: local path to a USER-CONVERTED (chrom,pos,ref,alt,score)
+            TSV for ESM-1v or EVE (weights never committed, Opción A).
+        source: "esm1v" or "eve" — selects the loader.
+
+    Returns dict with: scores, n_missing, fraction_missing, source.
+    """
+    if source == "esm1v":
+        scores_df = esm_eve.load_esm1v(score_path)
+    elif source == "eve":
+        scores_df = esm_eve.load_eve(score_path)
+    else:
+        raise ValueError(f"source must be 'esm1v' or 'eve', got {source!r}")
+
+    scores = esm_eve.join_scores(df, scores_df)
+    n_missing = int(np.isnan(scores).sum())
+    fraction_missing = n_missing / len(scores) if len(scores) else 0.0
+    return {
+        "scores": scores,
+        "n_missing": n_missing,
+        "fraction_missing": fraction_missing,
+        "source": source,
     }
