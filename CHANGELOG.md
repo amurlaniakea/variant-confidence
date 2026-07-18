@@ -25,6 +25,8 @@ new model — it adds an auditable calibration layer on top of existing predicto
   isolation (same gene never in both train and test); index-alignment bug fixed.
 - **Missing-data handling (AC4, T13b):** explicit missing-score handling and
   structured-missing detection; warning instead of silent failure.
+  Note: T13b added **2 new tests** (suite went 26 → 28); the original commit
+  message said "9 new tests" — that count was incorrect, corrected here.
 - **Non-deceptive reporting (AC7):** CLI emits score + interval + method + ECE
   before/after; never a bare calibrated score.
 - **AlphaMissense join (T13):** license-safe integration.

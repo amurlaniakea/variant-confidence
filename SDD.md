@@ -246,6 +246,13 @@ AC13 — AlphaMissense: licencia AMBIGUA, datos NUNCA commiteados (Opción A)
 
 AC13b — Patrón de missing REAL es ESTRUCTURAL (por proteína), no aleatorio
   (nota de audit #2, medido contra el TSV real 2026-07-18):
+  ⚠️ **NO VERIFICADO POR AUDITORÍA INDEPENDIENTE.** La cifra de abajo (19.118
+  proteínas uniprot, solo 1 con <5 variantes) fue medida por Hermes contra el
+  TSV local de AlphaMissense el 2026-07-18. El TSV NO está en el repo (Opción A)
+  y el auditor no tuvo acceso de red a las fuentes de descarga, así que esta
+  cifra descansa en la ejecución local de Hermes, NO en verificación externa.
+  Tratarla como no auditada; todo lo demás del proyecto sí pasó por audit paso
+  a paso. No presentar con el mismo nivel de confianza que el resto.
     - AlphaMissense cubre 19.118 proteínas uniprot. Cuando cubre una
       proteína, la cubre COMPLETAMENTE: solo 1 de 19.118 proteínas tiene
       <5 variantes; el resto tienen decenas/miles. El missing NO es por
