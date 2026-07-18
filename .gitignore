@@ -4,10 +4,22 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Credenciales / secretos (nunca commitear)
 .hermes/
 .gnupg/
 .aws/
 credentials/
+
+# Datos descargados en caliente (grandes, con sus propias licencias, red-dependent)
+data/cache/
+*.parquet
+*.csv.gz
+
 # Build artifacts
 *.egg-info/
 variant_confidence.egg-info/
+
+# NOTA: tests/fixtures/*.json SÍ se versiona (fixture offline determinista
+# para CI, no depende de red ni cache). Solo se excluye data/cache/.
+!tests/fixtures/*.json
