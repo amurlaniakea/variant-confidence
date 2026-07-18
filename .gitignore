@@ -28,3 +28,6 @@ coverage.xml
 # NOTA: tests/fixtures/*.json SÍ se versiona (fixture offline determinista
 # para CI, no depende de red ni cache). Solo se excluye data/cache/.
 !tests/fixtures/*.json
+
+# pytest-cov cache
+.coverage
