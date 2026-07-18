@@ -4,6 +4,7 @@ All network access goes through urllib with explicit User-Agent.
 Data files are cached locally under data/cache (gitignored).
 """
 from __future__ import annotations
+
 import json
 import time
 import urllib.parse
