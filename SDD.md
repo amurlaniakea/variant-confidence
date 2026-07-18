@@ -157,6 +157,23 @@ AC9 — Tamaño mínimo del holdout de calibración / fiabilidad del ECE
     como "bajo fiabilidad" en el reporte.
   - Esto previene el falso "ECE ≤ 0.05" por holdout minúsculo.
 
+AC10 — Separación fit/eval OBLIGATORIA en calibración (anti-fuga)
+  Toda calibración (Platt, isotonic, conformal) debe ajustarse sobre un
+  holdout de CALIBRACIÓN y evaluarse (ECE, cobertura) sobre un holdout de
+  EVALUACIÓN SEPARADO. Ajustar y predecir sobre el mismo array permite que
+  métodos no-paramétricos (isotonic, conformal) memoricen la curva de esos
+  puntos exactos y reporten ECE=0.0000 engañoso. Es la MISMA clase de fuga
+  que AC3 (gene-isolation) aplicada a la fase de calibración.
+  - Las funciones `calibrate_*` reciben `fit_idx`/`eval_idx` explícitos;
+    nunca deciden el split (el pipeline lo impone, igual que AC3).
+  - `_check_split` falla si fit/eval se solapan.
+  - El test de ECE mide SOBRE el holdout de evaluación; isotonic honesto
+    con 6k variantes ≈ 0.009 (no 0.0000). Si un calibrador reporta ECE=0
+    sobre la muestra de fit, es fuga, no generalización.
+  - Conformal: los cuantiles se calculan SOLO sobre fit_idx; los intervalos
+    se devuelven para eval_idx. Evaluar cobertura sobre fit_idx infla a
+    1−α por construcción (fuga).
+
 ================================================================
 ALCANCE HONESTO (sub-problemas, estilo SDD)
 ================================================================
