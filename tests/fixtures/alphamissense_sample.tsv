@@ -1,0 +1,13 @@
+# Synthetic STRUCTURAL fixture for tests — NOT real AlphaMissense data.
+# Mirrors the exact column layout of AlphaMissense_hg38.tsv.gz (CC BY-NC-SA 4.0
+# ambiguity; per Opción A the real scores are never committed). Values are
+# invented but deterministic, used only to verify the join logic aligns rows
+# correctly (bug #4 class: silent index misalignment). The real-data guard
+# test is run locally against the 71M-row TSV in /tmp and reported, not committed.
+CHROM	POS	REF	ALT	genome	uniprot_id	transcript_id	protein_variant	***	am_class
+chr1	69094	G	T	hg38	Q8NH21	ENST00000335137.4	V2L	0.2937	likely_benign
+chr1	69094	G	C	hg38	Q8NH21	ENST00000335137.4	V2M	0.3296	likely_benign
+chr1	69103	T	C	hg38	Q8NH21	ENST00000335137.4	F5L	0.9110	likely_pathogenic
+chr1	69104	T	G	hg38	Q8NH21	ENST00000335137.4	F5C	0.6917	likely_pathogenic
+chr2	100000	A	G	hg38	P12345	ENST00000200000.1	K10R	0.5123	ambiguous
+chr2	100001	C	T	hg38	P12345	ENST00000200000.1	L11S	0.0444	likely_benign

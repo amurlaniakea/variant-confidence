@@ -224,6 +224,26 @@ AC12 — Scores ausentes NUNCA como 0 (anti-bug #5, AC4 reforzado)
   - El CLI expone --on-missing y lo declara en el reporte ("MISSING SCORES
     = N (X%) [DEGRADED]" o FATAL en modo fail).
 
+AC13 — AlphaMissense: licencia AMBIGUA, datos NUNCA commiteados (Opción A)
+  Fuentes primarias OFICIALES se contradicen (verificado 2026-07-18):
+    - README de google-deepmind/alphamissense: "CC BY 4.0".
+    - Header real del TSV + Ensembl VEP + EBI: "CC BY-NC-SA 4.0".
+  No es resolvable desde aquí (no soy abogado; el contacto es
+  alphamissense@google.com para confirmación por escrito). Postura
+  prudente: tratar el dato como RESTRINGIDO hasta aclaración. Por tanto:
+    - El SCORES TSV (~71M filas / 613MB) NUNCA se commitea. El repo queda
+      100% AGPL-3.0 limpio.
+    - El usuario lo descarga localmente bajo su responsabilidad; el README
+      documenta la URL y la advertencia de licencia.
+    - Los tests usan un fixture ESTRUCTURAL sintético (columnas idénticas
+      al TSV real, valores inventados) — el repo no contiene NI UN BYTE de
+      AlphaMissense real. La validación contra el TSV real se hace en /tmp
+      y se reporta, no se commite.
+  - El join variante→score (CHROM,POS,REF,ALT) es el punto de máximo
+    riesgo de desalineación silenciosa (bug #4). Se valida con un test de
+    guarda que fija (variante→score) conocidos del TSV real y afirma el
+    match exacto; unmatched → NaN (nunca 0, AC12).
+
 ================================================================
 ALCANCE HONESTO (sub-problemas, estilo SDD)
 ================================================================

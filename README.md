@@ -36,19 +36,49 @@ pip install -e ".[dev]"
 ## Usage
 
 ```bash
-variant-confidence --method platt --min-holdout 500 --alpha 0.1
+# Offline demo (synthetic scores, versioned fixture — no network)
+variant-confidence --method platt --offline
+
+# Real AlphaMissense scores (download once, see "AlphaMissense data" below)
+variant-confidence --method conformal --on-missing degrade
 ```
 
-(CLI is currently a scaffold; the pipeline is wired in T2–T11b per SDD.md.)
+The CLI reports: raw score, calibrated probability (or conformal interval),
+method used, ECE before/after, and (conformal) empirical vs nominal coverage
+— measured on the **temporal holdout**, never a bare score (AC7, AC10).
+
+## AlphaMissense data (external download — NOT redistributed)
+
+AlphaMissense prediction scores are **never committed** to this repository.
+Download them locally under your own responsibility:
+
+```bash
+curl -L "https://storage.googleapis.com/dm_alphamissense/AlphaMissense_hg38.tsv.gz" \
+     -o AlphaMissense_hg38.tsv.gz
+```
+
+**License ambiguity — READ BEFORE USE.** Official primary sources disagree
+(verified 2026-07-18):
+
+- `google-deepmind/alphamissense` README states **CC BY 4.0**.
+- The actual TSV header, Ensembl VEP plugin, and EBI page state
+  **CC BY-NC-SA 4.0**.
+
+This contradiction is not resolved here. Until clarified in writing
+(contact `alphamissense@google.com`), **treat the data as restricted
+(non-commercial)**. The software remains AGPL-3.0-or-later and 100%
+self-contained; only the external score file is affected by this ambiguity.
 
 ## Data Licenses
 
 The **software** is AGPL-3.0-or-later. Input **data** carry their own
 licenses, which the end user is responsible for complying with:
 
-- **AlphaMissense predictions**: CC BY 4.0 (verified in
-  `google-deepmind/alphamissense`, relicensed from CC BY-NC in March 2024).
-  Attribution to DeepMind / Science 2023 (adg7492) required.
+- **AlphaMissense predictions**: license is **AMBIGUOUS** between official
+  sources — README says CC BY 4.0, but the distributed TSV + Ensembl VEP +
+  EBI say CC BY-NC-SA 4.0 (verified 2026-07-18). Not redistributed here;
+  download externally per the section above. Do not assume commercial use
+  is permitted until the contradiction is resolved by the rights holder.
 - **ClinVar / dbNSFP / Ensembl VEP**: subject to NCBI / EMBL-EBI terms
   (free use with attribution).
 - **gnomAD**: query + terms to be verified at implementation time (not
