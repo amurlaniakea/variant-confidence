@@ -78,6 +78,7 @@ def calibrate_conformal(
     labels = np.asarray(labels, dtype=int)
     n_eval = len(eval_idx)
     intervals = np.zeros((n_eval, 2))
+    mondrian_fallback_rate = 0.0
 
     def _quantiles(sub_scores: np.ndarray) -> tuple[float, float]:
         return tuple(np.quantile(sub_scores, [alpha / 2, 1 - alpha / 2]))
@@ -99,13 +100,30 @@ def calibrate_conformal(
         for y in (0, 1):
             mask = labels[fit_idx] == y
             global_q[y] = _quantiles(scores[fit_idx][mask]) if mask.sum() else (0.0, 1.0)
+        n_fallback = 0
         for g in np.unique(by_gene):
             m_fit = by_gene[fit_idx] == g
             for y in (0, 1):
                 m2 = m_fit & (labels[fit_idx] == y)
-                qs = _quantiles(scores[fit_idx][m2]) if m2.sum() else global_q[y]
+                if m2.sum() == 0:
+                    qs = global_q[y]
+                    n_fallback += int(((by_gene[eval_idx] == g) & (labels[eval_idx] == y)).sum())
+                else:
+                    qs = _quantiles(scores[fit_idx][m2])
                 m_eval = (by_gene[eval_idx] == g) & (labels[eval_idx] == y)
                 intervals[m_eval, 0] = qs[0]
                 intervals[m_eval, 1] = qs[1]
+        # With AC3 gene-isolation, NO test gene ever appears in train, so
+        # calib_idx (subset of train) never has per-gene data for eval genes.
+        # The Mondrian fallback therefore fires for ~100% of eval — Mondrian
+        # is then identical to split conformal by construction. We report the
+        # rate so the user is not misled into thinking per-gene stratification
+        # actually happened.
+        mondrian_fallback_rate = n_fallback / n_eval if n_eval else 0.0
 
-    return {"intervals": intervals, "alpha": alpha, "method": "conformal"}
+    return {
+        "intervals": intervals,
+        "alpha": alpha,
+        "method": "conformal",
+        "mondrian_fallback_rate": mondrian_fallback_rate,
+    }

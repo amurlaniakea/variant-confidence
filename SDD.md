@@ -173,6 +173,41 @@ AC10 — Separación fit/eval OBLIGATORIA en calibración (anti-fuga)
   - Conformal: los cuantiles se calculan SOLO sobre fit_idx; los intervalos
     se devuelven para eval_idx. Evaluar cobertura sobre fit_idx infla a
     1−α por construcción (fuga).
+  - NOTA Mondrian-por-gen: con AC3 (gene-isolation) NINGÚN gen de test aparece
+    en train, y calib ⊆ train, así que ningún gen de eval tiene cuantiles
+    propios en fit → el fallback global se activa para el 100% de los casos.
+    Mondrian es entonces IDÉNTICO a split conformal por construcción. El CLI
+    lo declara ("mondrian fallback rate = 100%"), no lo oculta. No es fuga,
+    es una consecuencia arquitectónica de AC3.
+
+AC11 — Catálogo de fugas silenciosas (lecciones de la sesión de audit)
+  Esta sesión cazó CUATRO fugas que NO fallaban: los números parecían
+  plausibles mientras medían sobre el subconjunto equivocado. Catálogo para
+  no repetirlas en trabajo futuro:
+  1. Cache commitido / test dependiente de red: el test corrido en clone
+     limpio fallaba por 403 porque dependía de cache no versionado. Fix:
+     fixture offline versionado en tests/fixtures/, .gitignore excluye
+     data/cache/, y git-filter-repo para purgar historial.
+  2. Generador sintético desconectado del label: el score ignoraba `y`
+     (`_ = labels`), AUC 0.51, y el ECE "bajaba a 0" por colapso a la tasa
+     base. Fix: true_p derivado del label real + ruido; el test exige
+     AUC>0.7 y AUC preservado tras calibrar.
+  3. Fit/eval sin separar en calibración: isotonic ajustaba y predecía sobre
+     el mismo array → ECE=0.0000 engañoso. Fix: calibrate_* reciben
+     fit_idx/eval_idx; _check_split revienta ante solapamiento; el test
+     afirma ECE isotónico > 1e-4 sobre el holdout.
+  4. Índices desalineados (el más peligroso): temporal_gene_isolated_split
+     hacía reset_index(drop=True), así que split.test.index era [0,1,..]
+     posiciones del subconjunto, no del df original. El pipeline indexaba
+     scores/y/genes con esos índices → apuntaba a filas arbitrarias, no al
+     holdout temporal; 238/1088 genes "de eval" eran de train (anulaba AC3).
+     Fix: SplitResult lleva test_idx/train_idx como posiciones ORIGINALES
+     (calculadas antes de cualquier reset). Test de guarda: genes de test
+     disjuntos de train vía test_idx, y test_idx != rango trivial [0..n).
+  REGLA GENERAL: cualquier métrica de calidad (ECE, cobertura, AUC) debe
+  medirse sobre el conjunto que el código DICE estar usando, verificado por
+  un test que reconstruye el conjunto de forma independiente. Si el número
+  "se ve bien" pero el split es incorrecto, el bug es silencioso.
 
 ================================================================
 ALCANCE HONESTO (sub-problemas, estilo SDD)

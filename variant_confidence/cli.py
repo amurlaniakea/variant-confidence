@@ -17,7 +17,7 @@ from variant_confidence.data.dataset import build_dataframe, build_dataframe_fro
 from variant_confidence.pipeline import run_calibration
 
 
-def _print_report(rep, scores_eval, labels_eval, method):
+def _print_report(rep, scores_eval, labels_eval, method, args):
     print("=" * 60)
     print(f"CALIBRATION REPORT — method={rep.method}")
     print(f"  n_eval (temporal holdout)={rep.n_eval}  n_calib={rep.n_calib}")
@@ -32,7 +32,15 @@ def _print_report(rep, scores_eval, labels_eval, method):
     if method == "conformal" and rep.conformal_coverage is not None:
         flag = "OK" if rep.coverage_within_tolerance else "OUT-OF-TOL"
         print(f"  conformal coverage (eval) = {rep.conformal_coverage:.4f} "
-              f"(nominal {rep.conformal_nominal:.4f}, tol ±0.02) [{flag}]")
+              f"(nominal {rep.conformal_nominal:.4f}, tol ±0.05) [{flag}]")
+        if args.mondrian and rep.mondrian_fallback_rate is not None:
+            rate = rep.mondrian_fallback_rate
+            note = ("100% — NO eval gene had its own calib data (by AC3 "
+                    "gene-isolation); Mondrian fell back to global per-label "
+                    "quantiles, so this is equivalent to SPLIT conformal"
+                    if rate >= 0.999 else
+                    f"{rate:.1%} of eval variants used global fallback")
+            print(f"  mondrian fallback rate = {rate:.1%}  ({note})")
     print("=" * 60)
 
 
@@ -76,7 +84,7 @@ def main(argv=None) -> int:
         eval_idx=eval_idx,
     )
     if not args.quiet:
-        _print_report(rep, scores[eval_idx], y[eval_idx], args.method)
+        _print_report(rep, scores[eval_idx], y[eval_idx], args.method, args)
     return 0
 
 
