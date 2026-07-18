@@ -244,6 +244,24 @@ AC13 — AlphaMissense: licencia AMBIGUA, datos NUNCA commiteados (Opción A)
     guarda que fija (variante→score) conocidos del TSV real y afirma el
     match exacto; unmatched → NaN (nunca 0, AC12).
 
+AC13b — Patrón de missing REAL es ESTRUCTURAL (por proteína), no aleatorio
+  (nota de audit #2, medido contra el TSV real 2026-07-18):
+    - AlphaMissense cubre 19.118 proteínas uniprot. Cuando cubre una
+      proteína, la cubre COMPLETAMENTE: solo 1 de 19.118 proteínas tiene
+      <5 variantes; el resto tienen decenas/miles. El missing NO es por
+      variante individual suelta — es por PROTEÍNA/ISOFORMA ENTERA ausente.
+    - Implicación para on_missing='degrade' + holdout temporal: al excluir
+      las variantes sin score, si las proteínas sin cobertura correlacionan
+      con algo (genes raros, regiones no codificantes, proteínas mal
+      anotadas), el holdout puede sesgarse SISTEMÁTICAMENTE. No es un bug
+      (el test test_missing_pattern.py lo detecta vía missing_proteins),
+      pero hay que reportarlo al interpretar la calibración en datos reales.
+    - Falta T13c (fuera de alcance aquí): enriquecer el fixture ClinVar con
+      CHROM/POS/REF/ALT (vía loader E-utilities) para medir la fracción
+      exacta de las 6044 variantes del fixture que caen en proteínas
+      cubiertas. El join por proteína requiere mapeo variant_id→uniprot_id
+      que el fixture actual no trae.
+
 ================================================================
 ALCANCE HONESTO (sub-problemas, estilo SDD)
 ================================================================
