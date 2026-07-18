@@ -1,0 +1,6 @@
+CHROM	POS	REF	ALT	score
+chr1	100	A	T	0.91
+chr2	200	G	C	0.42
+chr3	300	C	T	0.77
+chrM	400	A	G	0.15
+CHROM_lower	500	g	c	0.60
