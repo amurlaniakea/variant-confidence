@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "variant-confidence"
+version = "0.1.0"
+description = "Calibrated confidence layer for protein variant-effect pathogenicity predictions (AlphaMissense/ESM-1v/EVE)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+authors = [{ name = "Pedro Sordo Martínez", email = "amurlaniakea@gmail.com" }]
+keywords = ["bioinformatics", "variant-effect", "calibration", "conformal-prediction", "ECE", "pathogenicity"]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.4"]
+
+[project.scripts]
+variant-confidence = "variant_confidence.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["variant_confidence*", "tests*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
