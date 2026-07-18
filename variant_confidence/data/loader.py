@@ -4,8 +4,8 @@ All network access goes through urllib with explicit User-Agent.
 Data files are cached locally under data/cache (gitignored).
 """
 from __future__ import annotations
-
 import json
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -16,10 +16,17 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 UA = {"User-Agent": "variant-confidence/0.1 (amurlaniakea@gmail.com)"}
 
 
-def _get_json(url: str, data: bytes | None = None) -> dict:
-    req = urllib.request.Request(url, data=data, headers=UA)
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read())
+def _get_json(url: str, data: bytes | None = None, retries: int = 4) -> dict:
+    last_err = None
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, data=data, headers=UA)
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.loads(r.read())
+        except Exception as e:  # noqa: BLE001 - we retry on any network error
+            last_err = e
+            time.sleep(2 + attempt * 3)
+    raise last_err  # type: ignore[misc]
 
 
 def _norm_date(s: str) -> str:
@@ -57,14 +64,27 @@ def fetch_clinvar_missense(limit: int = 5000, cache: bool = True) -> list[dict]:
     base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     # esearch: just 'missense' — field-level clinical_significance filtering is
     # unreliable in E-utilities; we filter by description during parsing.
-    search = (
-        f"{base}/esearch.fcgi?db=clinvar&retmax={limit}"
-        "&term=missense&retmode=json"
-    )
-    s = _get_json(search)
-    ids = s.get("esearchresult", {}).get("idlist", [])
-    if not ids:
-        return []
+    # Paginate esearch in blocks of 10000 (retmax cap + NCBI rate limits);
+    # large single requests return HTTP 502.
+    ids: list[str] = []
+    page = 0
+    while len(ids) < limit:
+        retstart = page * 10000
+        search = (
+            f"{base}/esearch.fcgi?db=clinvar&retstart={retstart}&retmax=10000"
+            "&term=missense&retmode=json"
+        )
+        s = _get_json(search)
+        batch = s.get("esearchresult", {}).get("idlist", [])
+        if not batch:
+            break
+        ids.extend(batch)
+        if len(batch) < 10000:
+            break
+        page += 1
+        # polite delay to respect NCBI rate limits
+        time.sleep(0.34)
+    ids = ids[:limit]
 
     summary_url = f"{base}/esummary.fcgi?db=clinvar&retmode=json"
     out = []
@@ -93,6 +113,7 @@ def fetch_clinvar_missense(limit: int = 5000, cache: bool = True) -> list[dict]:
                 "clinvar_date": date,
                 "label": label,
             })
+        time.sleep(0.1)  # respect NCBI rate limits across 550 chunks
     if cache:
         cache_path.write_text(json.dumps(out))
     return out
