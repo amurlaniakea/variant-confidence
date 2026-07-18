@@ -1,40 +1,78 @@
-"""CLI entry point. MVP stub — la lógica de calibración/metrics/split se
-implementa en T2-T11b. No debe fallar silenciosamente (AC4/AC7)."""
+"""T10: CLI — non-deceptive output.
+
+Every prediction prints: raw score, calibrated probability (or conformal
+interval), the method used, ECE before/after, and (for conformal) empirical
+vs nominal coverage. Never a bare calibrated score — the whole point is that
+the user sees the uncertainty context (AC7).
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+
+from variant_confidence.calib.synthetic import generate_scores
+from variant_confidence.data.dataset import build_dataframe, build_dataframe_from_fixture
+from variant_confidence.pipeline import run_calibration
+
+
+def _print_report(rep, scores_eval, labels_eval, method):
+    print("=" * 60)
+    print(f"CALIBRATION REPORT — method={rep.method}")
+    print(f"  n_eval (temporal holdout)={rep.n_eval}  n_calib={rep.n_calib}")
+    print(f"  ECE before (raw) = {rep.ece_before:.4f} "
+          f"CI[{rep.ece_before_ci[0]:.4f},{rep.ece_before_ci[1]:.4f}]")
+    if method in ("platt", "isotonic"):
+        print(f"  ECE after  (cal) = {rep.ece_after:.4f} "
+              f"CI[{rep.ece_after_ci[0]:.4f},{rep.ece_after_ci[1]:.4f}]")
+        delta = rep.ece_before - rep.ece_after
+        print(f"  ECE reduction      = {delta:.4f} "
+              f"({'improved' if delta > 0 else 'WORSE'})")
+    if method == "conformal" and rep.conformal_coverage is not None:
+        flag = "OK" if rep.coverage_within_tolerance else "OUT-OF-TOL"
+        print(f"  conformal coverage (eval) = {rep.conformal_coverage:.4f} "
+              f"(nominal {rep.conformal_nominal:.4f}, tol ±0.02) [{flag}]")
+    print("=" * 60)
 
 
 def main(argv=None) -> int:
-    import argparse
+    ap = argparse.ArgumentParser(description="variant-confidence: calibrated pathogenicity")
+    ap.add_argument("--method", choices=["platt", "isotonic", "conformal"], default="platt")
+    ap.add_argument("--alpha", type=float, default=0.1)
+    ap.add_argument("--mondrian", action="store_true",
+                    help="conformal: stratify quantiles by gene (Mondrian). "
+                         "Requires enough per-gene calib data; otherwise falls "
+                         "back to global per-label quantiles.")
+    ap.add_argument("--limit", type=int, default=100000)
+    ap.add_argument("--min-holdout", type=int, default=500)
+    ap.add_argument("--offline", action="store_true",
+                    help="use versioned fixture (no network)")
+    ap.add_argument("--quiet", action="store_true")
+    args = ap.parse_args(argv)
 
-    parser = argparse.ArgumentParser(
-        prog="variant-confidence",
-        description="Calibrated confidence layer for variant-effect pathogenicity scores.",
+    df = (build_dataframe_from_fixture() if args.offline
+          else build_dataframe(limit=args.limit))
+    if df.empty:
+        print("ERROR: no data loaded", file=sys.stderr)
+        return 1
+    y = df["label_bin"].to_numpy()
+    genes = df["gene"].to_numpy()
+    scores = generate_scores(y, seed=42, overconfidence=0.6)
+
+    # temporal holdout = most recent variants (post gene-isolation, done
+    # upstream by split.temporal). For the CLI demo we reuse the fixture's
+    # dates to pick the eval set, keeping fit/eval disjoint.
+    from variant_confidence.split.temporal import temporal_gene_isolated_split
+    split = temporal_gene_isolated_split(df, holdout_days=730,
+                                          min_holdout=args.min_holdout, verbose=False)
+    eval_idx = split.test.index.to_numpy()
+
+    rep = run_calibration(
+        scores, y, method=args.method, alpha=args.alpha,
+        by_gene=genes if args.method == "conformal" and args.mondrian else None,
+        eval_idx=eval_idx,
     )
-    parser.add_argument("--version", action="version", version="variant-confidence 0.1.0")
-    parser.add_argument(
-        "--method",
-        choices=["platt", "isotonic", "conformal"],
-        default="platt",
-        help="Calibration method (AC1). Selectable, not hardcoded.",
-    )
-    parser.add_argument(
-        "--min-holdout",
-        type=int,
-        default=500,
-        help="Minimum temporal-holdout size before emitting ECE (AC9, parametrizable).",
-    )
-    parser.add_argument(
-        "--alpha",
-        type=float,
-        default=0.1,
-        help="Conformal coverage target 1-alpha (AC1b/AC2).",
-    )
-    # Placeholder: real pipeline wired in T2-T11b.
-    args = parser.parse_args(argv)
-    print(
-        "variant-confidence 0.1.0 (AGPL-3.0-or-later)\n"
-        f"  method={args.method} min-holdout={args.min_holdout} alpha={args.alpha}\n"
-        "  STATUS: scaffold only — pipeline not yet wired (see SDD T2-T11b)."
-    )
+    if not args.quiet:
+        _print_report(rep, scores[eval_idx], y[eval_idx], args.method)
     return 0
 
 

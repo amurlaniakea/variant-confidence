@@ -93,13 +93,17 @@ def calibrate_conformal(
             intervals[m_eval, 1] = qs[1]
     else:
         by_gene = np.asarray(by_gene)
-        for g in np.unique(by_gene[fit_idx]):
+        # precompute global per-label quantiles as FALLBACK for eval genes
+        # that have no calibration data in fit (avoids [0,0] dead intervals)
+        global_q = {}
+        for y in (0, 1):
+            mask = labels[fit_idx] == y
+            global_q[y] = _quantiles(scores[fit_idx][mask]) if mask.sum() else (0.0, 1.0)
+        for g in np.unique(by_gene):
             m_fit = by_gene[fit_idx] == g
             for y in (0, 1):
                 m2 = m_fit & (labels[fit_idx] == y)
-                if m2.sum() == 0:
-                    continue
-                qs = _quantiles(scores[fit_idx][m2])
+                qs = _quantiles(scores[fit_idx][m2]) if m2.sum() else global_q[y]
                 m_eval = (by_gene[eval_idx] == g) & (labels[eval_idx] == y)
                 intervals[m_eval, 0] = qs[0]
                 intervals[m_eval, 1] = qs[1]
