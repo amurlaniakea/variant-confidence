@@ -33,12 +33,13 @@ import numpy as np
 
 from variant_confidence.calib.synthetic import generate_scores
 from variant_confidence.data.dataset import build_dataframe, build_dataframe_from_fixture
+from variant_confidence.data.integrate import align_scores, align_scores_esm_eve
 from variant_confidence.pipeline import run_calibration
 
 
 def _print_report(rep, scores_eval, labels_eval, method, args):
     print("=" * 60)
-    print(f"CALIBRATION REPORT — method={rep.method}")
+    print(f"CALIBRATION REPORT — method={rep.method}  source={rep.source}")
     print(f"  n_eval (temporal holdout)={rep.n_eval}  n_calib={rep.n_calib}")
     if rep.n_missing > 0:
         print(f"  MISSING SCORES = {rep.n_missing} "
@@ -81,6 +82,14 @@ def main(argv=None) -> int:
     ap.add_argument("--min-holdout", type=int, default=500)
     ap.add_argument("--offline", action="store_true",
                     help="use versioned fixture (no network)")
+    ap.add_argument("--source", choices=["synthetic", "alphamissense", "esm1v", "eve"],
+                    default="synthetic",
+                    help="raw score source (T13/T14). 'synthetic' = offline fixture "
+                         "scores; the others require --score-path to a local, "
+                         "user-downloaded file (never committed, Opción A).")
+    ap.add_argument("--score-path", default=None,
+                    help="local path to the score file for --source "
+                         "alphamissense/esm1v/eve (downloaded by the user).")
     ap.add_argument("--on-missing", choices=["fail", "degrade"], default="fail",
                     help="how to handle NaN/missing scores (AC4). 'fail' raises "
                          "explicitly (default, CI-strict); 'degrade' excludes "
@@ -95,7 +104,25 @@ def main(argv=None) -> int:
         return 1
     y = df["label_bin"].to_numpy()
     genes = df["gene"].to_numpy()
-    scores = generate_scores(y, seed=42, overconfidence=0.6)
+
+    # Score source selection (T13/T14). Reuse the integration layer
+    # (align_scores / align_scores_esm_eve) — never reimplement join here.
+    # fail/degrade stays centralized in run_calibration (AC12).
+    if args.source == "synthetic":
+        scores = generate_scores(y, seed=42, overconfidence=0.6)
+        score_source = "synthetic"
+    else:
+        if not args.score_path:
+            print(f"ERROR: --source {args.source} requires --score-path",
+                  file=sys.stderr)
+            return 1
+        if args.source == "alphamissense":
+            aligned = align_scores(df, args.score_path, on="position")
+            scores = aligned["scores"]
+        else:  # esm1v or eve
+            aligned = align_scores_esm_eve(df, args.score_path, source=args.source)
+            scores = aligned["scores"]
+        score_source = args.source
 
     # temporal holdout = most recent variants (post gene-isolation, done
     # upstream by split.temporal). Use split.test_idx (ORIGINAL df positions,
@@ -110,7 +137,7 @@ def main(argv=None) -> int:
     rep = run_calibration(
         scores, y, method=args.method, alpha=args.alpha,
         by_gene=genes if args.method == "conformal" and args.mondrian else None,
-        eval_idx=eval_idx, on_missing=args.on_missing,
+        eval_idx=eval_idx, on_missing=args.on_missing, source=score_source,
     )
     if not args.quiet:
         _print_report(rep, scores[eval_idx], y[eval_idx], args.method, args)

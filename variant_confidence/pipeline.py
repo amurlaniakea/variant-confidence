@@ -65,6 +65,7 @@ class CalibrationReport:
     n_missing: int = 0
     fraction_missing: float = 0.0
     degraded: bool = False
+    source: str = "synthetic"  # origin of the raw scores (AC13/AC13c traceability)
 
 
 def run_calibration(
@@ -78,6 +79,7 @@ def run_calibration(
     calib_fraction: float = 0.5,
     seed: int = 42,
     on_missing: str = "fail",
+    source: str = "synthetic",
 ) -> CalibrationReport:
     """Calibrate `scores` and report ECE before/after on the EVAL holdout.
 
@@ -151,6 +153,7 @@ def run_calibration(
         n_missing=n_missing,
         fraction_missing=(n_missing / (n_missing + n)) if (n_missing + n) else 0.0,
         degraded=(n_missing > 0),
+        source=source,
     )
 
     if method in ("platt", "isotonic"):

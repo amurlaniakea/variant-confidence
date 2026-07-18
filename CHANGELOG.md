@@ -35,10 +35,12 @@ new model — it adds an auditable calibration layer on top of existing predicto
   pattern as AlphaMissense. `integrate.align_scores_esm_eve` wires it to the
   pipeline; weights are NEVER committed (Opción A). Licenses verified 2026-07-18
   (AC13c).
-  **T14g (PENDING):** wiring to `cli.py` / `run_calibration` so
-  `variant-confidence --source esm1v|eve` works end-to-end — analogous to how
-  AlphaMissense is plumbed. The join module + integration layer are done and
-  tested; CLI plumbing is not yet connected.
+  **T14g (DONE):** CLI wiring — `variant-confidence --source {synthetic,alphamissense,esm1v,eve}`
+  with `--score-path` selects the score source end-to-end. Reuses
+  `align_scores` / `align_scores_esm_eve` (no reimplemented join); fail/degrade
+  stays centralized in `run_calibration` (AC12); the report declares
+  `source=` and a missing score is never imputed as 0 (NaN guard preserved).
+  +8 tests (CLI wiring + integration layer), suite 38 passed, ruff clean.
 - **Degenerate-ECE bug fixed:** the synthetic generator now derives `true_p` from
   the real label with noise, so calibration is genuinely discriminative and AUC is
   preserved after calibration (no collapse to base rate).
